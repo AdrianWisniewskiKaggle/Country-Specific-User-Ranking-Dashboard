@@ -17,8 +17,8 @@ python scripts/dashboard.py
 ## Docker
 
 ```bash
-git clone git@gitlab.com:AdrianWisniewski/rag-method-made-easy.git
-cd rag-method-made-easy
+git clone git@gitlab.com:AdrianWisniewski/kaggle-country-competitions-ranking-dashboard.git
+cd kaggle-country-competitions-ranking-dashboard
 docker build -t dashboard .
 docker run -p 8050:8050 dashboard
 # Dash is running on http://0.0.0.0:8050/

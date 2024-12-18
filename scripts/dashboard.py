@@ -4,7 +4,6 @@ from dash import Input, Output
 from dash.dash_table import DataTable
 from flask_caching import Cache
 
-
 def load_data():
     """
     Load preprocessed parquet input data from:
@@ -203,7 +202,6 @@ def create_app(data):
                               'Country', 'Tier', 'Medals', 'Profile']].to_dict('records')
 
     return app
-
 
 if __name__ == '__main__':
     data = load_data()
