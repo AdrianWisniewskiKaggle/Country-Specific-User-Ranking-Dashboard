@@ -1,0 +1,38 @@
+# Ignore the Python bytecode
+__pycache__
+*.pyc
+*.pyo
+
+# Ignore cache files
+*.cache
+*.egg-info
+.eggs
+
+# Ignore virtual environments
+env/
+venv/
+.venv/
+
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore log files
+*.log
+
+# Ignore data files (if applicable)
+data/
+*.csv
+*.json
+
+# Ignore backup files
+*~           # Backup files
+*.bak        # Backup files
+
+# Ignore any other specified files/directories
+Dockerfile
+docker-compose.yml
+*.yml
+*.yaml
+
+# Ignore local configuration files, if applicable
+.env
