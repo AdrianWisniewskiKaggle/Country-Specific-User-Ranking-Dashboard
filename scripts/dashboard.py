@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import pandas as pd
 from dash import Dash, dcc, html
 from dash import Input, Output
@@ -12,33 +15,39 @@ def load_data():
     Returns:
         pd.DataFrame: DataFrame containing the loaded dataset.
     """
-    data = pd.read_parquet('conf/records.parquet')
+    data = pd.read_parquet('../conf/records.parquet')
     return data
-
 
 def get_unique_countries(data):
     """Get a sorted list of unique countries from the dataset."""
     unique_countries = data['Country'].unique()
     return sorted([country for country in unique_countries if pd.notna(country)])
 
+def get_unique_achievement_types(data):
+    """Get a sorted list of unique achievement types from the dataset."""
+    unique_achievement_types = data['AchievementType'].unique()
+    return sorted([achievement_type for achievement_type in unique_achievement_types if pd.notna(achievement_type)])
 
-def get_filtered_data(data, selected_country):
+def get_filtered_data(data, selected_country, selected_achievement_type):
     """
-    Retrieve data for the selected country.
+    Retrieve data for the selected country and achievement type.
 
     Parameters:
         data (pd.DataFrame): The DataFrame containing the dataset.
         selected_country (str): The name of the country to filter data for.
+        selected_achievement_type (str): The type of achievement to filter data for.
 
     Returns:
-        pd.DataFrame: Filtered DataFrame for the selected country, 
-                      or the entire DataFrame if no country is selected.
+        pd.DataFrame: Filtered DataFrame for the selected country and achievement type,
+                      or the entire DataFrame if no filters are selected.
     """
+    filtered_data = data.copy()
     if selected_country:
-        filtered_data = data[data['Country'] == selected_country].copy()
-        return filtered_data
-    return data.copy()
-
+        filtered_data = filtered_data[filtered_data['Country'] == selected_country]
+    if selected_achievement_type:
+        filtered_data = filtered_data[filtered_data['AchievementType'] == selected_achievement_type]
+    
+    return filtered_data
 
 def create_app(data):
     """
@@ -86,8 +95,16 @@ def create_app(data):
             dcc.Dropdown(
                 id='country-dropdown',
                 options=[{'label': country, 'value': country} for country in cached_get_unique_countries()],
-                value=None,
+                value=None,  # Default to None for "All Countries"
                 placeholder='Select a country',
+                multi=False
+            ),
+
+            dcc.Dropdown(
+                id='achievement-type-dropdown',
+                options=[{'label': achievement_type, 'value': achievement_type} for achievement_type in get_unique_achievement_types(data)],
+                value='Competitions',  # Set default to "Competitions"
+                placeholder='Select Achievement Type',
                 multi=False
             ),
 
@@ -114,7 +131,7 @@ def create_app(data):
                     'overflowY': 'auto',
                     'border': '3px solid #007bff',
                 },
-                page_size=200,
+                page_size=250,
                 sort_action='native',
                 style_header={
                     'backgroundColor': '#007bff',
@@ -145,21 +162,27 @@ def create_app(data):
 
     @app.callback(
         Output('achievements-table', 'data'),
-        Input('country-dropdown', 'value')
+        [Input('country-dropdown', 'value'),
+         Input('achievement-type-dropdown', 'value')]
     )
-    def update_table(selected_country):
+    def update_table(selected_country, selected_achievement_type):
         """
-        Update the achievements table based on the selected country.
+        Update the achievements table based on the selected country and achievement type.
 
         Parameters:
             selected_country (str): The name of the country selected in the dropdown.
+            selected_achievement_type (str): The achievement type selected in the dropdown.
 
         Returns:
             list: A list of dictionaries with the column data for the DataTable.
         """
-        filtered_data = get_filtered_data(data, selected_country)
+        filtered_data = get_filtered_data(data, selected_country, selected_achievement_type)
 
         if not filtered_data.empty:
+            # Sort by CurrentRanking in ascending order
+            filtered_data = filtered_data.sort_values(by='CurrentRanking', ascending=True)
+
+            # Calculate totals and prepare the Medals column
             filtered_data['TotalGold'] = filtered_data.get('TotalGold', 0).fillna(0).astype(int)
             filtered_data['TotalSilver'] = filtered_data.get('TotalSilver', 0).fillna(0).astype(int)
             filtered_data['TotalBronze'] = filtered_data.get('TotalBronze', 0).fillna(0).astype(int)
@@ -171,12 +194,14 @@ def create_app(data):
             )
 
             filtered_data = filtered_data.reset_index(drop=True)
-            filtered_data['No.'] = filtered_data.index + 1
+            filtered_data['No.'] = filtered_data.index + 1  # Start numbering from 1
 
+            # Create Profile links
             filtered_data['Profile'] = filtered_data['Profile'].apply(
                 lambda profile_url: f"[View Profile]({profile_url})" if pd.notna(profile_url) else "N/A"
             )
 
+            # Map Tier values to human-readable form
             tier_mapping = {
                 0: "Novice",
                 1: "Contributor",

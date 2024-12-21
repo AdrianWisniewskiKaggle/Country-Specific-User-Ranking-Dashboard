@@ -1,5 +1,6 @@
 dash==2.18.0
 dash_bootstrap_components==1.6.0
 flask_caching==2.0.1
+kaggle==1.6.17
 pandas==2.1.4
 pyarrow==16.1.0
