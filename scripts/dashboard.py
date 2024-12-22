@@ -12,8 +12,9 @@ from upload_metadata import KaggleDataProcessor
 class DataVisualizer:
     """A class to handle the loading and filtering of data, and the creation of a Dash application."""
 
-    def __init__(self, data):
+    def __init__(self, data, page_size):
         self.data = data
+        self.page_size = page_size
         self.app = self.create_app()
 
     @staticmethod
@@ -105,8 +106,7 @@ class DataVisualizer:
             html.H1("Country Ranking", style={'textAlign': 'center', 'color': 'black'})
         ], style={'padding': '0px'})
 
-    @staticmethod
-    def create_data_table():
+    def create_data_table(self):
         """Create the DataTable component."""
         return DataTable(
             id='achievements-table',
@@ -131,7 +131,7 @@ class DataVisualizer:
                 'overflowY': 'auto',
                 'border': '3px solid #007bff',
             },
-            page_size=250,
+            page_size=self.page_size,  # Use the page size from the argument
             sort_action='native',
             style_header={
                 'backgroundColor': '#007bff',
@@ -201,13 +201,15 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--update_metadata', action='store_true',
                         help="Whether to re-upload the latest Meta-Kaggle Dataset.")
+    parser.add_argument('--max_page_size', type=int, default=250,
+                        help="Max page size to render.")
     args = parser.parse_args()
     
     if args.update_metadata:
         KaggleDataProcessor()()
 
     data = DataVisualizer.load_data()
-    visualizer = DataVisualizer(data)
+    visualizer = DataVisualizer(data, args.max_page_size)  # Pass the page_size argument
     visualizer.app.run_server(host='0.0.0.0', port=8050, debug=True)
 
 if __name__ == '__main__':
