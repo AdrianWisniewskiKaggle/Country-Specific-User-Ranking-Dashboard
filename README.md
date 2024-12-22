@@ -37,5 +37,5 @@ docker run -e KAGGLE_USERNAME='your_kaggle_username' -e KAGGLE_KEY='your_kaggle_
 > Step 2: Generate the API Token: Navigate to Kaggle Profile. Scroll down to the API section and click on Create New API Token. This will download a kaggle.json file to your computer.\
 > Step 3 (Local): mkdir -p ~/.kaggle\
 > Step 4 (Local): mv ~/Downloads/kaggle.json ~/.kaggle/\
-> Step 5 (Local): chmod 600 ~/.kaggle/kaggle.json
+> Step 5 (Local): chmod 600 ~/.kaggle/kaggle.json \
 > Step 6 (Docker): Open kaggle.json, use credentials as KAGGLE_USERNAME / KAGGLE_KEY in Docker.
