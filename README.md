@@ -14,8 +14,8 @@ cd kaggle-country-competitions-ranking-dashboard
 conda env create --file=environment.yml
 conda activate dashboard
 python scripts/dashboard.py
-[optionally]: python scripts/dashboard.py --update_metadata   (Uploads latest kaggle meta-data dataset.)
-[optionally]: python scripts/dashboard.py --max_page_size 100 (Defines max number of rows in rendered table.)
+[optionally]: python scripts/dashboard.py --update_metadata (Uploads latest kaggle meta-data dataset.)
+[optionally]: python scripts/dashboard.py --max_page_size 5 (Defines max number of rows in rendered table.)
 # Dash is running on http://0.0.0.0:8050/
 ```
 
@@ -27,8 +27,8 @@ git clone git@gitlab.com:AdrianWisniewski/kaggle-country-competitions-ranking-da
 cd kaggle-country-competitions-ranking-dashboard
 docker build -t dashboard .
 docker run -e KAGGLE_USERNAME='your_kaggle_username' -e KAGGLE_KEY='your_kaggle_key' dashboard
-[optionally]: docker run -p 8050:8050 dashboard --update_metadata (Uploads latest kaggle meta-data dataset)
-[optionally]: docker run -p 8050:8050 dashboard --max_page_size   (Defines max number of rows in rendered table.)
+[optionally]: docker run -e KAGGLE_USERNAME='your_kaggle_username' -e KAGGLE_KEY='your_kaggle_key' dashboard --update_metadata (Uploads latest kaggle meta-data dataset)
+[optionally]: docker run -e KAGGLE_USERNAME='your_kaggle_username' -e KAGGLE_KEY='your_kaggle_key' dashboard --max_page_size 5 (Defines max number of rows in rendered table.)
 # Dash is running on http://0.0.0.0:8050/
 ```
 
