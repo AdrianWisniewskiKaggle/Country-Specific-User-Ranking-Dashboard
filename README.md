@@ -3,8 +3,7 @@
 This project is a web application built using Dash that visualizes the rankings of countries in various Kaggle competitions. \
 The application allows users to select a country from a dropdown menu and displays relevant achievements and rankings in a dynamic table format.
 
-![](./gifs/0.png){width=45% height=45%}
-![](./gifs/1.png){width=45% height=45%}
+![](./gifs/dashboard.mp4)
 
 ## Local
 
