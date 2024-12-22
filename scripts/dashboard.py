@@ -103,7 +103,7 @@ class DataVisualizer:
         """Return the header components for the layout."""
         return html.Div([
             html.H1("Kaggle", style={'textAlign': 'center', 'color': '#007bff'}),
-            html.H1("Country Ranking", style={'textAlign': 'center', 'color': 'black'})
+            html.H1("Country-Specific User Ranking Dashboard", style={'textAlign': 'center', 'color': 'black'})
         ], style={'padding': '0px'})
 
     def create_data_table(self):
