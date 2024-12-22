@@ -23,6 +23,7 @@ venv/
 conf/Users.csv
 conf/UserAchievements.csv
 data/
+gifs/
 *.csv
 *.json
 
