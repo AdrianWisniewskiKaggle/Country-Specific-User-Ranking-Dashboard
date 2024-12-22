@@ -26,7 +26,7 @@ Prerequisites: Docker, Kaggle Account
 git clone git@gitlab.com:AdrianWisniewski/kaggle-country-competitions-ranking-dashboard.git
 cd kaggle-country-competitions-ranking-dashboard
 docker build -t dashboard .
-docker run -p 8050:8050 dashboard
+docker run -e KAGGLE_USERNAME='your_kaggle_username' -e KAGGLE_KEY='your_kaggle_key' dashboard
 [optionally]: docker run -p 8050:8050 dashboard --update_metadata (Uploads latest kaggle meta-data dataset)
 [optionally]: docker run -p 8050:8050 dashboard --max_page_size   (Defines max number of rows in rendered table.)
 # Dash is running on http://0.0.0.0:8050/
@@ -35,6 +35,7 @@ docker run -p 8050:8050 dashboard
 > **Note:** To set up your Kaggle API authentication on Ubuntu using a hidden .kaggle directory containing your kaggle.json file, follow these steps:\
 > Step 1: Create a Kaggle Account\
 > Step 2: Generate the API Token: Navigate to Kaggle Profile. Scroll down to the API section and click on Create New API Token. This will download a kaggle.json file to your computer.\
-> Step 3: mkdir -p ~/.kaggle\
-> Step 4: mv ~/Downloads/kaggle.json ~/.kaggle/\
-> Step 5: chmod 600 ~/.kaggle/kaggle.json
+> Step 3 (Local): mkdir -p ~/.kaggle\
+> Step 4 (Local): mv ~/Downloads/kaggle.json ~/.kaggle/\
+> Step 5 (Local): chmod 600 ~/.kaggle/kaggle.json
+> Step 6 (Docker): Open kaggle.json, use credentials as KAGGLE_USERNAME / KAGGLE_KEY in Docker.
