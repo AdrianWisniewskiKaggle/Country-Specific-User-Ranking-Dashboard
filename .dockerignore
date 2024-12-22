@@ -20,6 +20,8 @@ venv/
 *.log
 
 # Ignore data files (if applicable)
+conf/Users.csv
+conf/UserAchievements.csv
 data/
 *.csv
 *.json

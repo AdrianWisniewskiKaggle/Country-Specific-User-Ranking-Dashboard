@@ -1,234 +1,214 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import argparse
 import pandas as pd
-from dash import Dash, dcc, html
-from dash import Input, Output
+from dash import Dash, dcc, html, Input, Output
 from dash.dash_table import DataTable
+from flask import Flask
 from flask_caching import Cache
+from upload_metadata import KaggleDataProcessor
 
-def load_data():
-    """
-    Load preprocessed parquet input data from:
-    https://www.kaggle.com/datasets/kaggle/meta-kaggle.
+class DataVisualizer:
+    """A class to handle the loading and filtering of data, and the creation of a Dash application."""
 
-    Returns:
-        pd.DataFrame: DataFrame containing the loaded dataset.
-    """
-    data = pd.read_parquet('../conf/records.parquet')
-    return data
+    def __init__(self, data):
+        self.data = data
+        self.app = self.create_app()
 
-def get_unique_countries(data):
-    """Get a sorted list of unique countries from the dataset."""
-    unique_countries = data['Country'].unique()
-    return sorted([country for country in unique_countries if pd.notna(country)])
+    @staticmethod
+    def load_data(file_path='conf/records.parquet'):
+        """Load preprocessed parquet input data."""
+        return pd.read_parquet(file_path)
 
-def get_unique_achievement_types(data):
-    """Get a sorted list of unique achievement types from the dataset."""
-    unique_achievement_types = data['AchievementType'].unique()
-    return sorted([achievement_type for achievement_type in unique_achievement_types if pd.notna(achievement_type)])
+    @staticmethod
+    def get_unique_countries(data):
+        """Get a sorted list of unique countries from the dataset."""
+        return sorted(data['Country'].dropna().unique())
 
-def get_filtered_data(data, selected_country, selected_achievement_type):
-    """
-    Retrieve data for the selected country and achievement type.
+    @staticmethod
+    def get_unique_achievement_types(data):
+        """Get a sorted list of unique achievement types from the dataset."""
+        return sorted(data['AchievementType'].dropna().unique())
 
-    Parameters:
-        data (pd.DataFrame): The DataFrame containing the dataset.
-        selected_country (str): The name of the country to filter data for.
-        selected_achievement_type (str): The type of achievement to filter data for.
+    def get_filtered_data(self, selected_country, selected_achievement_type):
+        """Retrieve data based on selected criteria."""
+        filtered_data = self.data.copy()
+        
+        if selected_country:
+            filtered_data = filtered_data[filtered_data['Country'] == selected_country]
+        if selected_achievement_type:
+            filtered_data = filtered_data[filtered_data['AchievementType'] == selected_achievement_type]
 
-    Returns:
-        pd.DataFrame: Filtered DataFrame for the selected country and achievement type,
-                      or the entire DataFrame if no filters are selected.
-    """
-    filtered_data = data.copy()
-    if selected_country:
-        filtered_data = filtered_data[filtered_data['Country'] == selected_country]
-    if selected_achievement_type:
-        filtered_data = filtered_data[filtered_data['AchievementType'] == selected_achievement_type]
-    
-    return filtered_data
+        return filtered_data
 
-def create_app(data):
-    """
-    Create and configure the Dash web application.
+    def create_app(self):
+        """Create and configure the Dash web application."""
+        server = Flask(__name__)
+        app = Dash(__name__, server=server)
+        cache = Cache(app.server, config={'CACHE_TYPE': 'simple'})
 
-    Parameters:
-        data (pd.DataFrame): The DataFrame containing the dataset.
+        app.layout = html.Div(
+            style=self.layout_style(),
+            children=self.get_layout_children()
+        )
 
-    Returns:
-        Dash: The Dash application object.
-    """
-    from flask import Flask
-    server = Flask(__name__)
-    app = Dash(__name__, server=server)
-    cache = Cache(app.server, config={'CACHE_TYPE': 'simple'})
+        @app.callback(
+            Output('achievements-table', 'data'),
+            [Input('country-dropdown', 'value'),
+             Input('achievement-type-dropdown', 'value')]
+        )
+        def update_table(selected_country, selected_achievement_type):
+            """Update the achievements table based on filters."""
+            filtered_data = self.get_filtered_data(selected_country, selected_achievement_type)
+            return self.prepare_table_data(filtered_data)
 
-    @cache.memoize(timeout=60)
-    def cached_get_unique_countries():
-        """Cache for unique countries."""
-        return get_unique_countries(data)
+        return app
 
-    app.layout = html.Div(
-        style={
-            'height': '100vh',
+    @staticmethod
+    def layout_style():
+        """Return the style dictionary for the layout."""
+        return {
+            'height': '94vh',
             'overflow': 'hidden',
             'position': 'relative',
             'backgroundImage': 'url("https://www.toptal.com/designers/subtlepatterns/uploads/blue-snow.png")',
-            'backgroundSize': 'cover',
-            'backgroundRepeat': 'no-repeat',
-            'backgroundPosition': 'center'
-        },
-        children=[
-            html.Div(
-                style={
-                    'padding': '0px', 
-                    'backgroundColor': 'rgba(255, 255, 255, 0.8)', 
-                    'marginBottom': '10px'
-                }
-            ),
-            html.Div([
-                html.H1("Kaggle", style={'textAlign': 'center', 'color': '#007bff'}),
-                html.H1("Country Competitions Ranking", style={'textAlign': 'center', 'color': 'black'})
-            ], style={'padding': '2px'}),
+            'backgroundSize': 'cover'
+        }
 
+    def get_layout_children(self):
+        """Return the layout children for the Dash app."""
+        return [
+            self.get_header(),
             dcc.Dropdown(
                 id='country-dropdown',
-                options=[{'label': country, 'value': country} for country in cached_get_unique_countries()],
-                value=None,  # Default to None for "All Countries"
+                options=[{'label': country, 'value': country} for country in self.get_unique_countries(self.data)],
                 placeholder='Select a country',
                 multi=False
             ),
-
             dcc.Dropdown(
                 id='achievement-type-dropdown',
-                options=[{'label': achievement_type, 'value': achievement_type} for achievement_type in get_unique_achievement_types(data)],
-                value='Competitions',  # Set default to "Competitions"
+                options=[{'label': achievement_type, 'value': achievement_type} \
+                         for achievement_type in self.get_unique_achievement_types(self.data)],
+                value='Competitions',
                 placeholder='Select Achievement Type',
                 multi=False
             ),
-
-            DataTable(
-                id='achievements-table',
-                columns=[
-                    {'name': 'No.', 'id': 'No.'},
-                    {'name': 'DisplayName', 'id': 'DisplayName'},
-                    {'name': 'CurrentRanking', 'id': 'CurrentRanking'},
-                    {'name': 'HighestRanking', 'id': 'HighestRanking'},
-                    {'name': 'Country', 'id': 'Country'},
-                    {'name': 'Tier', 'id': 'Tier'},
-                    {'name': 'Medals', 'id': 'Medals', 'presentation': 'markdown'},
-                    {'name': 'Profile', 'id': 'Profile', 'presentation': 'markdown'},
-                ],
-                style_data={
-                    'whiteSpace': 'normal',
-                    'height': 'auto',
-                    'border': '2px solid #007bff',
-                    'backgroundColor': 'rgba(255, 255, 255, 0.9)',
-                },
-                style_table={
-                    'height': '70vh',
-                    'overflowY': 'auto',
-                    'border': '3px solid #007bff',
-                },
-                page_size=250,
-                sort_action='native',
-                style_header={
-                    'backgroundColor': '#007bff',
-                    'fontWeight': 'bold',
-                    'color': 'white',
-                    'border': '2px solid #007bff',
-                },
-                style_data_conditional=[
-                    {
-                        'if': {'row_index': 'odd'},
-                        'backgroundColor': '#f2f2f2',
-                    },
-                    {
-                        'if': {'filter_query': '{CurrentRanking} > 0', 'column_id': 'CurrentRanking'},
-                        'backgroundColor': '#d4edda',
-                        'color': '#155724'
-                    },
-                    {
-                        'if': {'filter_query': '{CurrentRanking} <= 0', 'column_id': 'CurrentRanking'},
-                        'backgroundColor': '#f8d7da',
-                        'color': '#721c24'
-                    },
-                ],
-                markdown_options={"link_target": "_blank"},
-            )
+            self.create_data_table()
         ]
-    )
 
-    @app.callback(
-        Output('achievements-table', 'data'),
-        [Input('country-dropdown', 'value'),
-         Input('achievement-type-dropdown', 'value')]
-    )
-    def update_table(selected_country, selected_achievement_type):
-        """
-        Update the achievements table based on the selected country and achievement type.
+    @staticmethod
+    def get_header():
+        """Return the header components for the layout."""
+        return html.Div([
+            html.H1("Kaggle", style={'textAlign': 'center', 'color': '#007bff'}),
+            html.H1("Country Ranking", style={'textAlign': 'center', 'color': 'black'})
+        ], style={'padding': '0px'})
 
-        Parameters:
-            selected_country (str): The name of the country selected in the dropdown.
-            selected_achievement_type (str): The achievement type selected in the dropdown.
+    @staticmethod
+    def create_data_table():
+        """Create the DataTable component."""
+        return DataTable(
+            id='achievements-table',
+            columns=[
+                {'name': 'No.', 'id': 'No.'},
+                {'name': 'DisplayName', 'id': 'DisplayName'},
+                {'name': 'CurrentRanking', 'id': 'CurrentRanking'},
+                {'name': 'HighestRanking', 'id': 'HighestRanking'},
+                {'name': 'Country', 'id': 'Country'},
+                {'name': 'Tier', 'id': 'Tier'},
+                {'name': 'Medals', 'id': 'Medals', 'presentation': 'markdown'},
+                {'name': 'Profile', 'id': 'Profile', 'presentation': 'markdown'},
+            ],
+            style_data={
+                'whiteSpace': 'normal',
+                'height': 'auto',
+                'border': '2px solid #007bff',
+                'backgroundColor': 'rgba(255, 255, 255, 0.9)',
+            },
+            style_table={
+                'height': '70vh',
+                'overflowY': 'auto',
+                'border': '3px solid #007bff',
+            },
+            page_size=250,
+            sort_action='native',
+            style_header={
+                'backgroundColor': '#007bff',
+                'fontWeight': 'bold',
+                'color': 'white',
+                'border': '2px solid #007bff',
+            },
+            style_data_conditional=[
+                {
+                    'if': {'row_index': 'odd'},
+                    'backgroundColor': '#f2f2f2',
+                },
+                {
+                    'if': {'filter_query': '{CurrentRanking} > 0', 'column_id': 'CurrentRanking'},
+                    'backgroundColor': '#d4edda',
+                    'color': '#155724'
+                },
+                {
+                    'if': {'filter_query': '{CurrentRanking} <= 0', 'column_id': 'CurrentRanking'},
+                    'backgroundColor': '#f8d7da',
+                    'color': '#721c24'
+                },
+            ],
+            markdown_options={"link_target": "_blank"},
+        )
 
-        Returns:
-            list: A list of dictionaries with the column data for the DataTable.
-        """
-        filtered_data = get_filtered_data(data, selected_country, selected_achievement_type)
-
+    def prepare_table_data(self, filtered_data):
+        """Prepare data for the achievements table."""
         if not filtered_data.empty:
-            # Sort by CurrentRanking in ascending order
-            filtered_data = filtered_data.sort_values(by='CurrentRanking', ascending=True)
+            # Sort by CurrentRanking and prepare the Medals column
+            filtered_data = filtered_data.sort_values(by='CurrentRanking', ascending=True).reset_index(drop=True)
+            filtered_data['No.'] = filtered_data.index + 1
+            filtered_data['Medals'] = self.format_medals(filtered_data)
+            filtered_data['Profile'] = self.format_profiles(filtered_data)
 
-            # Calculate totals and prepare the Medals column
-            filtered_data['TotalGold'] = filtered_data.get('TotalGold', 0).fillna(0).astype(int)
-            filtered_data['TotalSilver'] = filtered_data.get('TotalSilver', 0).fillna(0).astype(int)
-            filtered_data['TotalBronze'] = filtered_data.get('TotalBronze', 0).fillna(0).astype(int)
-
-            filtered_data['Medals'] = (
-                "🏅 " + filtered_data['TotalGold'].astype(str) + " " +
-                "🥈 " + filtered_data['TotalSilver'].astype(str) + " " +
-                "🥉 " + filtered_data['TotalBronze'].astype(str)
-            )
-
-            filtered_data = filtered_data.reset_index(drop=True)
-            filtered_data['No.'] = filtered_data.index + 1  # Start numbering from 1
-
-            # Create Profile links
-            filtered_data['Profile'] = filtered_data['Profile'].apply(
-                lambda profile_url: f"[View Profile]({profile_url})" if pd.notna(profile_url) else "N/A"
-            )
-
-            # Map Tier values to human-readable form
-            tier_mapping = {
-                0: "Novice",
-                1: "Contributor",
-                2: "Expert",
-                3: "Master",
-                4: "Grandmaster"
-            }
+            # Map Tier values
+            tier_mapping = {0: "Novice", 1: "Contributor", 2: "Expert", 3: "Master", 4: "Grandmaster"}
             filtered_data['Tier'] = filtered_data['Tier'].replace(tier_mapping)
 
-        else:
-            return [{
-                'DisplayName': 'No Data', 
-                'CurrentRanking': 'N/A', 
-                'HighestRanking': 'N/A', 
-                'Country': 'N/A', 
-                'Tier': 'N/A', 
-                'Medals': 'N/A',
-                'No.': 'N/A',
-                'Profile': 'N/A'
-            }]
+            return filtered_data[['No.', 'DisplayName', 'CurrentRanking', 'HighestRanking', 
+                                  'Country', 'Tier', 'Medals', 'Profile']].to_dict('records')
 
-        return filtered_data[['No.', 'DisplayName', 'CurrentRanking', 'HighestRanking',
-                              'Country', 'Tier', 'Medals', 'Profile']].to_dict('records')
+        return [{'DisplayName': 'No Data', 'CurrentRanking': 'N/A', 'HighestRanking': 'N/A',
+                 'Country': 'N/A', 'Tier': 'N/A', 'Medals': 'N/A', 'No.': 'N/A', 'Profile': 'N/A'}]
 
-    return app
+    @staticmethod
+    def format_medals(filtered_data):
+        """Format the Medals information for display."""
+        filtered_data['TotalGold'] = filtered_data['TotalGold'].fillna(0).astype(int)
+        filtered_data['TotalSilver'] = filtered_data['TotalSilver'].fillna(0).astype(int)
+        filtered_data['TotalBronze'] = filtered_data['TotalBronze'].fillna(0).astype(int)
+
+        return (
+            "🏅 " + filtered_data['TotalGold'].astype(str) + " " +
+            "🥈 " + filtered_data['TotalSilver'].astype(str) + " " +
+            "🥉 " + filtered_data['TotalBronze'].astype(str)
+        )
+
+    @staticmethod
+    def format_profiles(filtered_data):
+        """Format the Profile URL for display."""
+        return filtered_data['Profile'].apply(lambda profile_url: f"[View Profile]({profile_url})" \
+                                              if pd.notna(profile_url) else "N/A")
+
+def main():
+    """Main function to run the Dash application."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--update_metadata', action='store_true',
+                        help="Whether to re-upload the latest Meta-Kaggle Dataset.")
+    args = parser.parse_args()
+    
+    if args.update_metadata:
+        KaggleDataProcessor()()
+
+    data = DataVisualizer.load_data()
+    visualizer = DataVisualizer(data)
+    visualizer.app.run_server(host='0.0.0.0', port=8050, debug=True)
 
 if __name__ == '__main__':
-    data = load_data()
-    app = create_app(data)
-    app.run_server(host='0.0.0.0', port=8050, debug=True)
+    main()
