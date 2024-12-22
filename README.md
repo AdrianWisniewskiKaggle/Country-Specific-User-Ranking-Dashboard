@@ -1,7 +1,7 @@
 # Kaggle Country-Specific User Ranking Dashboard
 
-This project is a web application built using Dash that visualizes user rankings from a Kaggle dataset. It allows users to filter rankings based on country and achievement type, displaying the results in a dynamic data table.
-Pipeline is downloading User.csv and UserAchievemnts.csv files from https://www.kaggle.com/datasets/kaggle/meta-kaggle, preprocessing files and creates records.parquet, sotring in conf directory.
+This project is a web application built using Dash that visualizes user rankings from a Kaggle dataset. It allows users to filter rankings based on country and achievement type, displaying the results in a dynamic data table. 
+> **NOTE ** This repository already contains the necessary data to create the required tables. However, please note that the current dataset file originates from December 22, 2024. If you wish to update the dataset, use the --update-metadata flag when running your command to fetch the latest data.
 
 ![](./gifs/dashboard.mp4)
 
@@ -35,6 +35,6 @@ docker run -p 8050:8050 dashboard
 > **Note:** To set up your Kaggle API authentication on Ubuntu using a hidden .kaggle directory containing your kaggle.json file, follow these steps:\
 > Step 1: Create a Kaggle Account\
 > Step 2: Generate the API Token: Navigate to Kaggle Profile. Scroll down to the API section and click on Create New API Token. This will download a kaggle.json file to your computer.\
-> mkdir -p ~/.kaggle\
-> mv ~/Downloads/kaggle.json ~/.kaggle/\
-> chmod 600 ~/.kaggle/kaggle.json
+> Step 3: mkdir -p ~/.kaggle\
+> Step 4: mv ~/Downloads/kaggle.json ~/.kaggle/\
+> Step 5: chmod 600 ~/.kaggle/kaggle.json
